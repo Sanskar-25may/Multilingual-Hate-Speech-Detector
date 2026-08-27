@@ -744,13 +744,13 @@ def main() -> None:
                     with col3:
                         st.metric("Max-Length Truncated", "Yes ⚠️" if result.truncated else "No ✅")
                         
-                # 4. Human-In-The-Loop Error Reporting Form
+                # 4. Misclassification Logging (for future retraining)
                 st.write("")
                 st.markdown("---")
-                st.subheader("🔄 Human-In-The-Loop Error Reporting")
+                st.subheader("🔄 Misclassification Logging (for future retraining)")
                 st.markdown(
-                    "Simulate an active learning pipeline. If the model misclassified this sentence, "
-                    "report the correct classification below to log it into our active validation loop dataset."
+                    "Log misclassified sentences into a local database. This compiles high-priority "
+                    "candidates with their decision thresholds for future retraining cycles."
                 )
                 
                 feedback_col1, feedback_col2 = st.columns([3, 1])
