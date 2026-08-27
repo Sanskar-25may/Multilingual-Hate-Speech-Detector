@@ -2,6 +2,13 @@
 
 ### 📊 [👉 View the Project Presentation Slides (Interactive PDF)](./presentation.pdf)
 
+
+<!-- Hero App Screenshot -->
+<p align="center">
+  <img src="./assets/app_screenshot.png" alt="Multilingual Hate Speech Detector Dashboard" width="100%">
+</p>
+
+
 An interactive, research-grade content moderation system fine-tuned on the **mBERT (Multilingual BERT)** architecture. It targets **English, Hindi (Devanagari)**, and **Hinglish (Code-Mixed)** internet comments, incorporating vocabulary augmentation and mathematical TF-IDF feature selection.
 
 ## 🚀 Key Features
