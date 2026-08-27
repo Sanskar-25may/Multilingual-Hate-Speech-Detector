@@ -23,8 +23,8 @@ Procure Hindi-English code-mixed and multilingual datasets, clean the raw noisy 
 
 ### 1. Dataset Selection
 To ensure your project successfully targets Hindi, English, and Hinglish (code-mixed transliteration), you will utilize:
-*   **INDOHATEMIX Dataset:** A high-quality social media benchmark specifically curated from Indian platforms (like Koo) that captures the complex socio-political, cultural, and conversational nuances of Hinglish code-mixing and transliteration [182, 188, 193].
-*   **Alternative/Supplementary Options:** The **HASOC** (Hate Speech and Offensive Content Identification in Indo-European Languages) datasets [175] or the **Davidson et al.** dataset for English offensive baselines [34, 45].
+*   **HASOC 2021 Dataset (Primary):** The HASOC (Hate Speech and Offensive Content Identification in Indo-European Languages) 2021 Subtask-A Hinglish/Hindi dataset (curated from Twitter). We pivoted from our initial plan of using IndoHateMix to this HASOC 2021 Subtask-A mirror (`harjeet-blue/Hate-Speech-Detection-In-Social-Media`) because it shipped pre-labeled, high-quality, pre-split datasets ready for training, which fit our strict project timeline.
+*   **Alternative/Supplementary Options:** The **INDOHATEMIX** dataset [182] and **Davidson et al.** dataset [34].
 
 ### 2. Standardized Text Preprocessing Pipeline
 Social media text is highly unstructured. Write a Python preprocessing script to clean every text string before it is used for training or inference:
@@ -62,7 +62,7 @@ Instead of standard English BERT, you will load a pre-trained multilingual model
 Standard multilingual tokenizers rely on static vocabularies (e.g., mBERT's 110k WordPiece tokens) which frequently fail to capture informal code-mixed expressions, variant spellings, and obfuscated regional slurs [34, 36, 57].
 
 #### Implementation Steps
-1.  **Extract Out-of-Vocabulary (OOV) Terms:** Parse your INDOHATEMIX dataset to identify frequently occurring Hinglish profanities, regional slurs, and internet jargon not present in the transformer's default dictionary [44, 65].
+1.  **Extract Out-of-Vocabulary (OOV) Terms:** Parse your HASOC training dataset to identify frequently occurring Hinglish profanities, regional slurs, and internet jargon not present in the transformer's default dictionary [44, 65].
 2.  **Append to Tokenizer:** Use Hugging Face's API to add these custom tokens to your model's tokenizer:
     ```python
     tokenizer.add_tokens(["custom_hinglish_term1", "custom_hinglish_term2"])
@@ -76,10 +76,10 @@ Set up your PyTorch training loop or Hugging Face `Trainer` API with the followi
 *   **Train/Test Split:** Preserve an 80-20 stratified split to ensure unbiased assessment [43, 45, 170].
 *   **Optimizer:** AdamW [19].
 *   **Learning Rate:** Keep it small (e.g., `2e-5` to `5e-5` for standard fine-tuning) to prevent catastrophic forgetting [19, 38].
-*   **Epochs:** 3 to 5 epochs (to prevent overfitting on code-mixed data).
+*   **Epochs:** 3 epochs (to prevent overfitting on code-mixed data).
 *   **Sequence Length:** Set to 128 tokens (truncating longer strings) to optimize memory and speed [42, 63].
 
-Once trained, save the model and tokenizer to a directory (e.g., `./saved_multilingual_model/`) to be loaded by the frontend.
+Once trained, save the model and tokenizer to a directory (e.g., `./saved_model/`) to be loaded by the frontend.
 
 ---
 
@@ -91,7 +91,7 @@ Develop a highly polished, responsive web application using Streamlit to accept 
 ### 1. Core UI Elements (Layout Structure)
 Refer to your `design.md` for full wireframe guidelines. The frontend must implement:
 *   **Interactive Input Area:** A text area supporting dual Hindi (Devanagari) and Roman script (Hinglish/English) input.
-*   **Dataset Examples Selector:** A drop-down menu containing preloaded sample Hinglish sentences from the INDOHATEMIX benchmark to let users test predictions instantly [197, 222].
+*   **Dataset Examples Selector:** A drop-down menu containing preloaded sample Hinglish sentences from the HASOC 2021 benchmark to let users test predictions instantly [197, 222].
 *   **Prediction Dashboard:** Colorful metric displays showing the final class label ("Safe" in green, "Hateful" in red) and confidence probabilities.
 
 ### 2. Low-Latency Pipeline Integration
@@ -107,7 +107,7 @@ To satisfy the strict performance constraint of **<2 seconds execution time**:
 Evaluate your model using traditional classification metrics, test its limits with specialized functional test suites, conduct an error analysis, and package the repository for submission.
 
 ### 1. Standard Metrics Evaluation
-Calculate and compile the following metrics on your held-out 20% validation set:
+Calculate and compile the following metrics on your held-out 15% validation split:
 *   **Macro F1-Score:** Crucial for evaluating hate speech due to class imbalance [143, 154].
 *   **Precision and Recall:** Separately analyzed for the hateful and non-hateful classes to monitor false positives and false negatives [48, 69, 173].
 

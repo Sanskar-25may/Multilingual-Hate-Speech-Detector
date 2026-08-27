@@ -41,13 +41,13 @@ This component standardizes noisy social media text to reduce vocabulary varianc
 *   **TF-IDF Sample Selection (Training-Phase Optimization):** To accelerate training under strict deadlines, the pipeline applies a TF-IDF mathematical filter. It computes TF-IDF word scores across the entire dataset, aggregates them per sentence, ranks all samples, and filters out the bottom 25% lowest-information entries. Retaining only the **top 75% most informative sentences** reduces model fine-tuning time by nearly 50% while maintaining or improving overall classification accuracy.
 
 ### 3.3. Tokenization & Vocabulary Augmentation Layer
-Standard multilingual models suffer from "out-of-vocabulary" (OOV) issues when encountering localized slang, code-mixed text, or transliterated profanity.
+Standard multilingual models suffer from \"out-of-vocabulary\" (OOV) issues when encountering localized slang, code-mixed text, or transliterated profanity.
 *   **Base Tokenization:** Text is tokenized using the standard subword tokenizer of the selected transformer (e.g., WordPiece for mBERT) with a fixed maximum sequence length of 128.
 *   **Vocabulary Augmentation:** Specific Hinglish slurs and dialectal expressions are extracted from the training corpus and manually appended to the tokenizer's dictionary using `.add_tokens()`. The model's embedding layer is then dynamically resized. This lightweight domain adaptation ensures the model processes regional curses as unified semantic units rather than breaking them into uninformative subword parts.
 
 ### 3.4. Deep Learning Modeling Layer
 *   **Base Model Selection:** Fine-tuned on pre-trained multilingual architectures like `bert-base-multilingual-cased` (mBERT) or `xlm-roberta-base` (XLM-RoBERTa). XLM-RoBERTa is pre-trained on 100 languages, providing native structural knowledge of both English and Hindi.
-*   **Code-Mixed Specialization:** The model is fine-tuned on specialized datasets like **IndoHateMix**, which capture real-world Hinglish syntax, transliterations, and informal social media structures.
+*   **Code-Mixed Specialization:** The model is fine-tuned on specialized datasets like **HASOC 2021 Subtask-A** (retrieved from a verified public mirror in the `harjeet-blue` repository). We pivoted from **IndoHateMix** to the HASOC 2021 Subtask-A mirror because the HASOC mirror shipped pre-labeled, standardized train/test splits that fit our strict submission timeline, whereas the IndoHateMix public release did not fit our development window. This was a deliberate, documented, and highly defensible engineering pivot to secure project reliability.
 *   **Classification Head:** A linear layer acts as a classification head on top of the transformer's pooled representation, outputting a probability distribution (Hate vs. Non-Hate).
 
 ### 3.5. Evaluation & Diagnostic Layer

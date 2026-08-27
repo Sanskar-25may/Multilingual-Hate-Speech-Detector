@@ -46,7 +46,7 @@ The application utilizes a **split-screen layout** featuring a clean sidebar for
 *   **Multilingual Text Area:** A clean text box accepting Unicode. It natively handles both standard Devanagari Hindi script (e.g., "दुनिया में सबसे ज़्यादा...") and Romanized transliterated Hinglish (e.g., "wo shudra insaan dikhte hai...").
 *   **Action Row:**
     *   `Analyze Text` Button: Triggers the preprocessing, tokenization, and inference pipeline.
-    *   `Load Example` Dropdown: Provides preloaded, vetted sample tweets from the **INDOHATEMIX** dataset to let the instructor test Hinglish code-mixing instantly.
+    *   `Load Example` Dropdown: Provides preloaded, vetted sample tweets from the **HASOC 2021** dataset to let the instructor test Hinglish code-mixing instantly.
 *   **Dynamic Response Banner:**
     *   🚨 **Red Banner ("Hate Speech / Abusive Detected")**: Triggered if the model toxicity probability exceeds the threshold.
     *   ✅ **Green Banner ("Safe / Non-Hate Speech")**: Triggered if the text is classified as clean.
