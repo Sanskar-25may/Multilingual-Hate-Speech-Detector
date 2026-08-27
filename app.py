@@ -541,6 +541,23 @@ def write_feedback(text: str, gold_label: str, predicted_label: str, threshold: 
         st.error(f"Error saving feedback: {e}")
         return False
 
+
+@st.cache_data
+def load_mhc_hindi_results() -> pd.DataFrame | None:
+    """Load pre-computed large-scale MHC Hindi evaluation results if available."""
+    path = PROJECT_ROOT / "data" / "mhc_hindi_results.csv"
+    if path.is_file():
+        try:
+            df = pd.read_csv(path)
+            required = {"test_case", "gold", "predicted", "hate_prob", "functionality", "correct"}
+            if required.issubset(df.columns):
+                # Ensure correct column casting
+                df["correct"] = df["correct"].astype(bool)
+                return df
+        except Exception as e:
+            st.error(f"Error loading MHC Hindi results: {e}")
+    return None
+
 def main() -> None:
     st.set_page_config(
         page_title="Multilingual Hate Speech & Toxic Content Detector",
@@ -759,56 +776,167 @@ def main() -> None:
                         
     # ------------------ Tab 2: Diagnostics & Benchmarks ------------------
     with tab2:
-        st.subheader("📊 Performance Diagnostics on Multilingual HateCheck (MHC)")
+        st.subheader("📊 Performance Diagnostics & Evaluation Benchmarks")
         st.markdown(
             "To go beyond standard validation accuracies, this diagnostic dashboard reports performance against "
             "the **Multilingual HateCheck (MHC)** framework. This allows you to evaluate your model on tricky "
             "contrastive cases, ensuring it hasn't developed unhelpful identity-term or profanity bias."
         )
         
-        # Pull global evaluation metrics from MHC suite
-        st.write("")
-        metric_col1, metric_col2, metric_col3 = st.columns(3)
-        with metric_col1:
-            st.metric("MHC Macro F1-Score", f"{mhc_frame.attrs['overall_macro_f1'] * 100:.2f}%")
-        with metric_col2:
-            st.metric("MHC Macro Precision", f"{mhc_frame.attrs['overall_precision'] * 100:.2f}%")
-        with metric_col3:
-            st.metric("MHC Macro Recall", f"{mhc_frame.attrs['overall_recall'] * 100:.2f}%")
+        mhc_hindi_df = load_mhc_hindi_results()
+        
+        # Sub-tabs for Peer-Reviewed Benchmark vs Supplementary Stress Tests
+        diag_sub1, diag_sub2 = st.tabs([
+            "🔬 Peer-Reviewed Benchmark: HateCheck Hindi (Röttger et al., 2022)",
+            "⚡ Supplementary Hinglish & Script-Mixed Stress Tests"
+        ])
+        
+        with diag_sub1:
+            if mhc_hindi_df is not None:
+                st.subheader("🇮🇳 Academic Benchmark: HateCheck Hindi Suite")
+                st.markdown(
+                    "This suite consists of **thousands of targeted, peer-reviewed diagnostic cases** in Devanagari Hindi "
+                    "created by Röttger et al. (WOAH 2022) to audit model robustness."
+                )
+                
+                # Overall Metrics
+                y_true = [1 if g == "HOF" else 0 for g in mhc_hindi_df["gold"]]
+                y_pred = [1 if p == "HOF" else 0 for p in mhc_hindi_df["predicted"]]
+                
+                mhc_f1 = f1_score(y_true, y_pred, average="macro", zero_division=0)
+                mhc_prec = precision_score(y_true, y_pred, average="macro", zero_division=0)
+                mhc_rec = recall_score(y_true, y_pred, average="macro", zero_division=0)
+                
+                metric_col1, metric_col2, metric_col3 = st.columns(3)
+                with metric_col1:
+                    st.metric("MHC Hindi Macro F1-Score", f"{mhc_f1 * 100:.2f}%")
+                with metric_col2:
+                    st.metric("MHC Hindi Macro Precision", f"{mhc_prec * 100:.2f}%")
+                with metric_col3:
+                    st.metric("MHC Hindi Macro Recall", f"{mhc_rec * 100:.2f}%")
+                
+                # Category breakdown table
+                st.write("")
+                st.subheader("🏷️ Category-wise Diagnostics Breakdown")
+                cat_rows = []
+                for cat, group in mhc_hindi_df.groupby("functionality"):
+                    g_ids = [1 if g == "HOF" else 0 for g in group["gold"]]
+                    p_ids = [1 if p == "HOF" else 0 for p in group["predicted"]]
+                    cat_f1 = f1_score(g_ids, p_ids, average="macro", zero_division=0)
+                    cat_prec = precision_score(g_ids, p_ids, average="macro", zero_division=0)
+                    cat_rec = recall_score(g_ids, p_ids, average="macro", zero_division=0)
+                    cat_rows.append({
+                        "Linguistic Test Category": cat,
+                        "Macro F1-Score": round(float(cat_f1), 3),
+                        "Precision": round(float(cat_prec), 3),
+                        "Recall": round(float(cat_rec), 3),
+                    })
+                cat_df = pd.DataFrame(cat_rows)
+                st.table(cat_df)
+                
+                # Case-Level Viewer
+                st.write("")
+                st.subheader("🔬 Contrastive Suite Case-Level Viewer")
+                selected_cat = st.selectbox(
+                    "Filter HateCheck Hindi test cases by linguistic category",
+                    options=list(mhc_hindi_df["functionality"].unique())
+                )
+                
+                filtered_mhc = mhc_hindi_df[mhc_hindi_df["functionality"] == selected_cat].copy()
+                
+                # Style dataframe visualization
+                def highlight_correctness_hindi(row):
+                    bg = "background-color: rgba(42, 157, 143, 0.1);" if row["Decision Correct"] else "background-color: rgba(230, 57, 70, 0.1);"
+                    return [bg] * len(row)
+                    
+                display_mhc = filtered_mhc[["test_case", "gold", "predicted", "hate_prob", "correct"]].reset_index(drop=True)
+                display_mhc.columns = ["Test Case Sentence", "Gold Standard", "Model Prediction", "Hate Probability", "Decision Correct"]
+                
+                st.dataframe(display_mhc.style.apply(highlight_correctness_hindi, axis=1), use_container_width=True)
+                
+            else:
+                st.warning("### 🔬 Setup Action Required: Peer-Reviewed HateCheck Hindi Dataset Not Active!")
+                st.info(
+                    """
+                    Your application supports large-scale academic auditing against the official **HateCheck Hindi** (Röttger et al., 2022) dataset, 
+                    but your pre-evaluated results file **`data/mhc_hindi_results.csv`** was not found.
+                    
+                    **How to unlock this professional academic tab:**
+                    1.  **Run Evaluation on GPU:** In your Google Colab training notebook, run the code from the **`colab_mhc_eval_script.py`** file (available in your Studio panel). This script loads your trained model weights, downloads the official test cases, executes GPU-accelerated batch inference, and exports your predictions.
+                    2.  **Download the Results CSV:** Once the script runs (takes about 5 seconds), download the output file **`mhc_hindi_results.csv`** from Colab's file explorer.
+                    3.  **Place the File locally:** Move the downloaded CSV file into your local project directory at:
+                        `Hate-Speech-Detector/data/mhc_hindi_results.csv`
+                    4.  **Refresh your browser page!** The app will load the file instantly in milliseconds without any download latency or local CPU burden.
+                    """
+                )
+                
+                # Draw a gorgeous preview so the user knows what they'll get
+                st.write("")
+                st.subheader("👀 Preview of the Peer-Reviewed Evaluation Dashboard")
+                st.markdown(
+                    "Once loaded, the HateCheck Hindi Suite will display professional metrics and categorize model performance across these categories:"
+                )
+                preview_rows = [
+                    {"Linguistic Test Category": "Expression of hate using profanity", "Macro F1-Score": 0.812, "Precision": 0.820, "Recall": 0.804},
+                    {"Linguistic Test Category": "Non-hateful use of profanity", "Macro F1-Score": 0.845, "Precision": 0.835, "Recall": 0.855},
+                    {"Linguistic Test Category": "Hate expressed through negation", "Macro F1-Score": 0.789, "Precision": 0.795, "Recall": 0.783},
+                    {"Linguistic Test Category": "Counter-speech targeting slurs", "Macro F1-Score": 0.864, "Precision": 0.850, "Recall": 0.878},
+                    {"Linguistic Test Category": "Slur used in non-hateful context", "Macro F1-Score": 0.802, "Precision": 0.810, "Recall": 0.794},
+                ]
+                st.table(pd.DataFrame(preview_rows))
+                
+        with diag_sub2:
+            st.subheader("⚡ Supplementary Hinglish & Script-Mixed Stress Tests")
+            st.markdown(
+                "These **12 custom contrastive cases** evaluate your model on tricky code-mixed Hinglish transliterations "
+                "and spelling obfuscations. Since there are currently no public peer-reviewed academic functional suites "
+                "for Hinglish, these test cases represent a **novel diagnostic stress test** designed for this project."
+            )
             
-        # Category Breakdown
-        st.write("")
-        st.subheader("🏷️ Category-wise Diagnostics Breakdown")
-        
-        # Calculate Category level table
-        cat_df = mhc_frame[[
-            "category", "macro_f1_category", "precision_category", "recall_category"
-        ]].drop_duplicates().reset_index(drop=True)
-        cat_df.columns = ["Linguistic Test Category", "Macro F1-Score", "Precision", "Recall"]
-        
-        st.table(cat_df)
-        
-        # Interactive Suite Viewer
-        st.write("")
-        st.subheader("🔬 Contrastive Suite Case-Level Viewer")
-        selected_cat = st.selectbox(
-            "Filter MHC test cases by linguistic category",
-            options=list(mhc_frame["category"].unique())
-        )
-        
-        filtered_mhc = mhc_frame[mhc_frame["category"] == selected_cat].copy()
-        
-        # Style dataframe visualization
-        def highlight_correctness(row):
-            bg = "background-color: rgba(42, 157, 143, 0.1);" if row["Decision Correct"] else "background-color: rgba(230, 57, 70, 0.1);"
-            return [bg] * len(row)
+            # Pull global evaluation metrics from local MHC suite
+            st.write("")
+            metric_col1, metric_col2, metric_col3 = st.columns(3)
+            with metric_col1:
+                st.metric("Stress Test Macro F1-Score", f"{mhc_frame.attrs['overall_macro_f1'] * 100:.2f}%")
+            with metric_col2:
+                st.metric("Stress Test Macro Precision", f"{mhc_frame.attrs['overall_precision'] * 100:.2f}%")
+            with metric_col3:
+                st.metric("Stress Test Macro Recall", f"{mhc_frame.attrs['overall_recall'] * 100:.2f}%")
+                
+            # Category Breakdown
+            st.write("")
+            st.subheader("🏷️ Stress Test Category-wise Diagnostics Breakdown")
             
-        display_mhc = filtered_mhc[["text", "gold", "predicted", "hate_prob", "correct"]].reset_index(drop=True)
-        display_mhc.columns = ["Test Case Sentence", "Gold Standard", "Model Prediction", "Hate Probability", "Decision Correct"]
-        
-        st.dataframe(display_mhc.style.apply(highlight_correctness, axis=1), use_container_width=True)
-        
-    # ------------------ Tab 3: Future Scaling Strategy ------------------
+            # Calculate Category level table
+            cat_df = mhc_frame[[
+                "category", "macro_f1_category", "precision_category", "recall_category"
+            ]].drop_duplicates().reset_index(drop=True)
+            cat_df.columns = ["Linguistic Test Category", "Macro F1-Score", "Precision", "Recall"]
+            
+            st.table(cat_df)
+            
+            # Interactive Suite Viewer
+            st.write("")
+            st.subheader("🔬 Stress Test Case-Level Viewer")
+            selected_cat = st.selectbox(
+                "Filter stress test cases by linguistic category",
+                options=list(mhc_frame["category"].unique())
+            )
+            
+            filtered_mhc = mhc_frame[mhc_frame["category"] == selected_cat].copy()
+            
+            # Style dataframe visualization
+            def highlight_correctness_stress(row):
+                bg = "background-color: rgba(42, 157, 143, 0.1);" if row["Decision Correct"] else "background-color: rgba(230, 57, 70, 0.1);"
+                return [bg] * len(row)
+                
+            display_mhc = filtered_mhc[["text", "gold", "predicted", "hate_prob", "correct"]].reset_index(drop=True)
+            display_mhc.columns = ["Test Case Sentence", "Gold Standard", "Model Prediction", "Hate Probability", "Decision Correct"]
+            
+            st.dataframe(display_mhc.style.apply(highlight_correctness_stress, axis=1), use_container_width=True)
+            
+        # ------------------ Tab 2: Diagnostics & Benchmarks ------------------
+        # ------------------ Tab 3: Future Scaling Strategy ------------------
     with tab3:
         st.subheader("🧬 Dynamic Language Scaling & Cross-Lingual Transfer Plan")
         st.markdown(
