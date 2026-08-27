@@ -1,0 +1,22 @@
+# Ignore massive model weights & directories
+saved_model/
+saved_model.zip
+saved_model_xlmr/
+saved_model_xlmr.zip
+results/
+data/raw_dataset.csv
+data/preprocessed_filtered_dataset.csv
+
+# Ignore virtual environments
+venv/
+.venv/
+env/
+
+# Ignore Python runtime caches
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Ignore local Streamlit system folders
+.streamlit/secrets.toml
