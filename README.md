@@ -1,5 +1,7 @@
 # 🚨 Multilingual Hate Speech & Toxic Content Detector
 
+### 📊 [👉 View the Project Presentation Slides (Interactive PDF)](./presentation.pdf)
+
 An interactive, research-grade content moderation system fine-tuned on the **mBERT (Multilingual BERT)** architecture. It targets **English, Hindi (Devanagari)**, and **Hinglish (Code-Mixed)** internet comments, incorporating vocabulary augmentation and mathematical TF-IDF feature selection.
 
 ## 🚀 Key Features
